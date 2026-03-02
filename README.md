@@ -1,4 +1,4 @@
-# <__SEE_LOGIN__>
+# <__SEE_ONLINE__>
 ## What is this?
 This will be an attempt at writing a backend for Rust in hopes of learning both Rust + Typescript / React Native an learning how to properly set up a VPS with minimum required security and configuration.
 ## What is the end product?
