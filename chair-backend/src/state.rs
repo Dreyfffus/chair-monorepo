@@ -1,4 +1,3 @@
-// src/state.rs
 use sqlx::PgPool;
 
 #[derive(Clone)]

@@ -1,28 +1,60 @@
-// src/Dashboard.tsx
-// Your canvas. The machine is already provisioned when this renders.
-//
-// Use listPresets() to load on mount.
-// Use createPreset() when the user creates a new preset.
-// Use updatePreset(name, values) when the user saves changes to an existing one.
-// The preset name is the key — treat it as the identifier, not the id.
-
-import { useEffect, useState } from 'react';
-import { listPresets, createPreset, updatePreset } from './api';
+import { useState } from 'react';
+import { IdlePage } from './pages/IdlePage';
+import { PresetListPage } from './pages/PresetListPage';
+import { PresetFormPage } from './pages/PresetFormPage';
+import { ActiveSessionPage } from './pages/ActiveSessionPage';
+import type { Theme } from './hooks/useTheme'
 import type { Preset } from './types';
 
-export function Dashboard() {
-  const [presets, setPresets] = useState<Preset[]>([]);
 
-  useEffect(() => {
-    listPresets()
-      .then(setPresets)
-      .catch(console.error);
-  }, []);
+type View =
+    | { name: 'idle' }
+    | { name: 'list' }
+    | { name: 'form'; editing?: Preset }
+    | { name: 'active'; preset: Preset };
 
-  // Everything below this line is yours to build.
-  return (
-    <div>
-      <pre>{JSON.stringify(presets, null, 2)}</pre>
-    </div>
-  );
+interface DashboardProps {
+    theme: Theme;
+    onToggleTheme: () => void;
+}
+
+export function Dashboard({ theme, onToggleTheme }: DashboardProps) {
+    const [view, setView] = useState<View>({ name: 'idle' });
+
+    if (view.name === 'idle')
+        return <IdlePage theme={theme} onToggleTheme={onToggleTheme} onStart={() => setView({ name: 'list' })} />;
+
+    if (view.name === 'list')
+        return (
+            <PresetListPage
+                theme={theme}
+                onToggleTheme={onToggleTheme}
+                onBack={() => setView({ name: 'idle' })}
+                onNew={() => setView({ name: 'form' })}
+                onEdit={preset => setView({ name: 'form', editing: preset })}
+                onLoad={preset => setView({ name: 'active', preset })}
+            />
+        );
+
+    if (view.name === 'form')
+        return (
+            <PresetFormPage
+                theme={theme}
+                onToggleTheme={onToggleTheme}
+                editing={view.editing}
+                onBack={() => setView({ name: 'list' })}
+                onSaved={() => setView({ name: 'list' })}
+            />
+        );
+
+    if (view.name === 'active')
+        return (
+            <ActiveSessionPage
+                preset={view.preset}
+                onFinish={() => setView({ name: 'idle' })}
+                onCancel={() => setView({ name: 'list' })}
+            />
+        );
+
+    return null;
 }

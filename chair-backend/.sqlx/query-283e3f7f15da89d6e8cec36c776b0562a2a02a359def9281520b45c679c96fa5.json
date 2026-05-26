@@ -1,0 +1,81 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO presets (machine_id, name, mode, chair_angle_degrees, light_mode, light_color, created_at, updated_at)\n        VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())\n        RETURNING id, machine_id, name, mode, chair_angle_degrees, light_mode, light_color, times_loaded, created_at, updated_at\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "machine_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "mode",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "chair_angle_degrees",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 5,
+        "name": "light_mode",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "light_color",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "times_loaded",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 8,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 9,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text",
+        "Int4",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "283e3f7f15da89d6e8cec36c776b0562a2a02a359def9281520b45c679c96fa5"
+}

@@ -1,0 +1,76 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT id, machine_id, name, mode, chair_angle_degrees, light_mode, light_color, times_loaded, created_at, updated_at\n        FROM presets\n        WHERE machine_id = $1\n        ORDER BY times_loaded DESC, created_at ASC\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "machine_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "mode",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "chair_angle_degrees",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 5,
+        "name": "light_mode",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "light_color",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "times_loaded",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 8,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 9,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "3566f47a941d63fe7e68c5c8fc348e335b2580a873ea801353ab94e1759af590"
+}
