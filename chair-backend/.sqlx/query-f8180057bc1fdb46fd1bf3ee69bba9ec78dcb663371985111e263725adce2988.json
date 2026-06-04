@@ -1,0 +1,124 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT\n            COUNT(*)::bigint                                              AS \"total_sessions!\",\n            COALESCE(SUM(duration_seconds), 0)::bigint                   AS \"total_duration!\",\n            COALESCE(AVG(duration_seconds::float8), 0.0)::float8         AS \"avg_duration!\",\n            COALESCE(AVG(chair_angle_degrees::float8), 0.0)::float8      AS \"avg_angle!\",\n\n            COUNT(*) FILTER (WHERE lumbar_heat = 0)::bigint              AS \"lumbar_off!\",\n            COUNT(*) FILTER (WHERE lumbar_heat = 1)::bigint              AS \"lumbar_low!\",\n            COUNT(*) FILTER (WHERE lumbar_heat = 2)::bigint              AS \"lumbar_med!\",\n            COUNT(*) FILTER (WHERE lumbar_heat = 3)::bigint              AS \"lumbar_high!\",\n\n            COUNT(*) FILTER (WHERE upper_back_heat = 0)::bigint          AS \"upper_back_off!\",\n            COUNT(*) FILTER (WHERE upper_back_heat = 1)::bigint          AS \"upper_back_low!\",\n            COUNT(*) FILTER (WHERE upper_back_heat = 2)::bigint          AS \"upper_back_med!\",\n            COUNT(*) FILTER (WHERE upper_back_heat = 3)::bigint          AS \"upper_back_high!\",\n\n            COUNT(*) FILTER (WHERE leg_heat = 0)::bigint                 AS \"leg_off!\",\n            COUNT(*) FILTER (WHERE leg_heat = 1)::bigint                 AS \"leg_low!\",\n            COUNT(*) FILTER (WHERE leg_heat = 2)::bigint                 AS \"leg_med!\",\n            COUNT(*) FILTER (WHERE leg_heat = 3)::bigint                 AS \"leg_high!\",\n\n            COUNT(*) FILTER (WHERE light_mode = 'circadian')::bigint     AS \"circadian!\",\n            COUNT(*) FILTER (WHERE light_mode = 'manual')::bigint        AS \"manual!\"\n        FROM sessions\n        WHERE machine_id = $1\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "total_sessions!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "total_duration!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 2,
+        "name": "avg_duration!",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 3,
+        "name": "avg_angle!",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 4,
+        "name": "lumbar_off!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 5,
+        "name": "lumbar_low!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 6,
+        "name": "lumbar_med!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 7,
+        "name": "lumbar_high!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 8,
+        "name": "upper_back_off!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 9,
+        "name": "upper_back_low!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 10,
+        "name": "upper_back_med!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 11,
+        "name": "upper_back_high!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 12,
+        "name": "leg_off!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 13,
+        "name": "leg_low!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 14,
+        "name": "leg_med!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 15,
+        "name": "leg_high!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 16,
+        "name": "circadian!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 17,
+        "name": "manual!",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "f8180057bc1fdb46fd1bf3ee69bba9ec78dcb663371985111e263725adce2988"
+}

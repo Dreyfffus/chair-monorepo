@@ -22,7 +22,9 @@ pub async fn list_presets(
     let presets = sqlx::query_as!(
         Preset,
         r#"
-        SELECT id, machine_id, name, mode, chair_angle_degrees, light_mode, light_color, times_loaded, created_at, updated_at
+        SELECT id, machine_id, name, chair_angle_degrees,
+               lumbar_heat, upper_back_heat, leg_heat,
+               light_mode, light_color, times_loaded, created_at, updated_at
         FROM presets
         WHERE machine_id = $1
         ORDER BY times_loaded DESC, created_at ASC
@@ -31,7 +33,10 @@ pub async fn list_presets(
     )
     .fetch_all(&state.pool)
     .await
-    .map_err(|e| { tracing::error!("DB error listing presets: {e}"); StatusCode::INTERNAL_SERVER_ERROR })?;
+    .map_err(|e| {
+        tracing::error!("DB error listing presets: {e}");
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
     Ok(Json(presets))
 }
@@ -44,7 +49,9 @@ pub async fn get_preset(
     let preset = sqlx::query_as!(
         Preset,
         r#"
-        SELECT id, machine_id, name, mode, chair_angle_degrees, light_mode, light_color, times_loaded, created_at, updated_at
+        SELECT id, machine_id, name, chair_angle_degrees,
+               lumbar_heat, upper_back_heat, leg_heat,
+               light_mode, light_color, times_loaded, created_at, updated_at
         FROM presets
         WHERE machine_id = $1 AND name = $2
         "#,
@@ -53,7 +60,10 @@ pub async fn get_preset(
     )
     .fetch_optional(&state.pool)
     .await
-    .map_err(|e| { tracing::error!("DB error fetching preset: {e}"); StatusCode::INTERNAL_SERVER_ERROR })?
+    .map_err(|e| {
+        tracing::error!("{e}");
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?
     .ok_or(StatusCode::NOT_FOUND)?;
 
     Ok(Json(preset))
@@ -93,14 +103,20 @@ pub async fn create_preset(
     let preset = sqlx::query_as!(
         Preset,
         r#"
-        INSERT INTO presets (machine_id, name, mode, chair_angle_degrees, light_mode, light_color, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
-        RETURNING id, machine_id, name, mode, chair_angle_degrees, light_mode, light_color, times_loaded, created_at, updated_at
+        INSERT INTO presets (machine_id, name, chair_angle_degrees,
+                             lumbar_heat, upper_back_heat, leg_heat,
+                             light_mode, light_color, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
+        RETURNING id, machine_id, name, chair_angle_degrees,
+                  lumbar_heat, upper_back_heat, leg_heat,
+                  light_mode, light_color, times_loaded, created_at, updated_at
         "#,
         machine.id,
         payload.name.trim(),
-        payload.mode,
         payload.chair_angle_degrees,
+        payload.lumbar_heat,
+        payload.upper_back_heat,
+        payload.leg_heat,
         payload.light_mode,
         payload.light_color,
     )
@@ -109,11 +125,17 @@ pub async fn create_preset(
     .map_err(|e| {
         if let sqlx::Error::Database(ref db_err) = e {
             if db_err.code().as_deref() == Some("23505") {
-                return (StatusCode::CONFLICT, format!("A preset named '{}' already exists", payload.name.trim()));
+                return (
+                    StatusCode::CONFLICT,
+                    format!("A preset named '{}' already exists", payload.name.trim()),
+                );
             }
         }
-        tracing::error!("DB error creating preset: {e}");
-        (StatusCode::INTERNAL_SERVER_ERROR, "Failed to create preset".to_string())
+        tracing::error!("{e}");
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Failed to create preset".to_string(),
+        )
     })?;
 
     Ok((StatusCode::CREATED, Json(preset)))
@@ -133,20 +155,36 @@ pub async fn update_preset(
         Preset,
         r#"
         UPDATE presets
-        SET mode = $3, chair_angle_degrees = $4, light_mode = $5, light_color = $6, updated_at = NOW()
+        SET chair_angle_degrees = $3,
+            lumbar_heat         = $4,
+            upper_back_heat     = $5,
+            leg_heat            = $6,
+            light_mode          = $7,
+            light_color         = $8,
+            updated_at          = NOW()
         WHERE machine_id = $1 AND name = $2
-        RETURNING id, machine_id, name, mode, chair_angle_degrees, light_mode, light_color, times_loaded, created_at, updated_at
+        RETURNING id, machine_id, name, chair_angle_degrees,
+                  lumbar_heat, upper_back_heat, leg_heat,
+                  light_mode, light_color, times_loaded, created_at, updated_at
         "#,
         machine.id,
         name,
-        payload.mode,
         payload.chair_angle_degrees,
+        payload.lumbar_heat,
+        payload.upper_back_heat,
+        payload.leg_heat,
         payload.light_mode,
         payload.light_color,
     )
     .fetch_optional(&state.pool)
     .await
-    .map_err(|e| { tracing::error!("{e}"); (StatusCode::INTERNAL_SERVER_ERROR, "Failed to update preset".to_string()) })?
+    .map_err(|e| {
+        tracing::error!("{e}");
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Failed to update preset".to_string(),
+        )
+    })?
     .ok_or_else(|| (StatusCode::NOT_FOUND, format!("No preset named '{name}'")))?;
 
     Ok(Json(preset))
@@ -160,18 +198,34 @@ pub async fn load_preset(
     let preset = sqlx::query_as!(
         Preset,
         r#"
-        UPDATE presets
-        SET times_loaded = times_loaded + 1
+        UPDATE presets SET times_loaded = times_loaded + 1
         WHERE machine_id = $1 AND name = $2
-        RETURNING id, machine_id, name, mode, chair_angle_degrees, light_mode, light_color, times_loaded, created_at, updated_at
+        RETURNING id, machine_id, name, chair_angle_degrees,
+                  lumbar_heat, upper_back_heat, leg_heat,
+                  light_mode, light_color, times_loaded, created_at, updated_at
         "#,
         machine.id,
         name
     )
     .fetch_optional(&state.pool)
     .await
-    .map_err(|e| { tracing::error!("{e}"); StatusCode::INTERNAL_SERVER_ERROR })?
+    .map_err(|e| {
+        tracing::error!("{e}");
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?
     .ok_or(StatusCode::NOT_FOUND)?;
+
+    // Send settings to Arduino then SESSION_START
+    let mut cmds = crate::serial::command::commands_for_settings(
+        preset.chair_angle_degrees,
+        preset.lumbar_heat,
+        preset.upper_back_heat,
+        preset.leg_heat,
+        &preset.light_mode,
+        preset.light_color.as_deref(),
+    );
+    cmds.push(crate::serial::Command::SessionStart);
+    state.send_commands(cmds).await;
 
     Ok(Json(preset))
 }

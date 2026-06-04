@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO sessions\n            (machine_id, preset_name, duration_seconds,\n             chair_angle_degrees, lumbar_heat, upper_back_heat, leg_heat,\n             light_mode, light_color)\n        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Int4",
+        "Int4",
+        "Int4",
+        "Int4",
+        "Int4",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "27ca7c0ab0dd5bcd129dbe154006e8d4380bb36161d36de6adbca47b1a384313"
+}

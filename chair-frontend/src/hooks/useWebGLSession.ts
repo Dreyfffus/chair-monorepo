@@ -1,6 +1,5 @@
 import { useEffect, useRef } from "react";
 import type { RefObject } from "react";
-
 import VERT_SRC from "../shaders/session.vert?raw";
 import FRAG_SRC from "../shaders/session.frag?raw";
 
@@ -13,13 +12,12 @@ interface HSL {
 function parseToHsl(color: string): HSL {
   const m = color.match(/hsl\(([\d.]+),\s*([\d.]+)%,\s*([\d.]+)%\)/);
   if (m) return { h: +m[1], s: +m[2] / 100, l: +m[3] / 100 };
-
   const hex = color.replace("#", "");
   const r = parseInt(hex.slice(0, 2), 16) / 255;
   const g = parseInt(hex.slice(2, 4), 16) / 255;
   const b = parseInt(hex.slice(4, 6), 16) / 255;
-  const max = Math.max(r, g, b);
-  const min = Math.min(r, g, b);
+  const max = Math.max(r, g, b),
+    min = Math.min(r, g, b);
   const lv = (max + min) / 2;
   if (max === min) return { h: 0, s: 0, l: lv };
   const d = max - min;
@@ -52,7 +50,7 @@ function compile(
 }
 
 function buildProgram(gl: WebGLRenderingContext): WebGLProgram {
-  const p = gl.createProgram();
+  const p = gl.createProgram()!;
   gl.attachShader(p, compile(gl, gl.VERTEX_SHADER, VERT_SRC));
   gl.attachShader(p, compile(gl, gl.FRAGMENT_SHADER, FRAG_SRC));
   gl.linkProgram(p);
@@ -65,25 +63,35 @@ export function useWebGLSession(
   canvasRef: RefObject<HTMLCanvasElement>,
   lightColor: string,
   bgColor: string,
-  total: number,
-  onComplete: (elapsed: number) => void,
+  onComplete?: (elapsed: number) => void,
 ) {
   const onCompleteRef = useRef(onComplete);
   onCompleteRef.current = onComplete;
+  const completedRef = useRef(false);
+
+  const uniformsRef = useRef({
+    light: parseToHsl(lightColor),
+    bg: parseToHsl(bgColor),
+    delta: shortHueDelta(parseToHsl(lightColor), parseToHsl(bgColor)),
+  });
+  const newLight = parseToHsl(lightColor);
+  const newBg = parseToHsl(bgColor);
+  uniformsRef.current = {
+    light: newLight,
+    bg: newBg,
+    delta: shortHueDelta(newLight, newBg),
+  };
 
   useEffect(() => {
+    completedRef.current = false;
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     const gl = canvas.getContext("webgl");
     if (!gl) {
-      console.warn("WebGL Unavailable");
+      console.warn("WebGL unavailable");
       return;
     }
-
-    const lightHsl = parseToHsl(lightColor);
-    const bgHsl = parseToHsl(bgColor);
-    const hueDelta = shortHueDelta(lightHsl, bgHsl);
 
     let prog: WebGLProgram;
     try {
@@ -95,7 +103,6 @@ export function useWebGLSession(
 
     gl.useProgram(prog);
 
-    // Fullscreen quad — two triangles
     const buf = gl.createBuffer()!;
     gl.bindBuffer(gl.ARRAY_BUFFER, buf);
     gl.bufferData(
@@ -115,14 +122,9 @@ export function useWebGLSession(
     const uBg = gl.getUniformLocation(prog, "u_bg_hsl");
     const uHueDelta = gl.getUniformLocation(prog, "u_hue_delta");
 
-    // Static uniforms — set once
-    gl.uniform3f(uLight, lightHsl.h, lightHsl.s, lightHsl.l);
-    gl.uniform3f(uBg, bgHsl.h, bgHsl.s, bgHsl.l);
-    gl.uniform1f(uHueDelta, hueDelta);
-
     const resize = () => {
-      const w = canvas.clientWidth;
-      const h = canvas.clientHeight;
+      const w = canvas.clientWidth,
+        h = canvas.clientHeight;
       if (canvas.width !== w || canvas.height !== h) {
         canvas.width = w;
         canvas.height = h;
@@ -135,32 +137,27 @@ export function useWebGLSession(
     observer.observe(canvas);
     resize();
 
-    const sessionStart = Date.now();
     let rafTs0 = 0;
     let raf: number;
-    let completed = false;
 
     const tick = (ts: number) => {
       if (rafTs0 === 0) rafTs0 = ts;
       const relTime = (ts - rafTs0) / 1000;
-      const elapsed = (Date.now() - sessionStart) / 1000;
-      const progress = Math.min(elapsed / total, 1);
 
+      const progress = 0.0;
+
+      const { light, bg, delta } = uniformsRef.current;
+      gl.uniform3f(uLight, light.h, light.s, light.l);
+      gl.uniform3f(uBg, bg.h, bg.s, bg.l);
+      gl.uniform1f(uHueDelta, delta);
       gl.uniform1f(uTime, relTime);
       gl.uniform1f(uProgress, progress);
       gl.drawArrays(gl.TRIANGLES, 0, 6);
-
-      if (progress >= 1 && !completed) {
-        completed = true;
-        onCompleteRef.current(Math.round(elapsed));
-        return;
-      }
 
       raf = requestAnimationFrame(tick);
     };
 
     raf = requestAnimationFrame(tick);
-
     return () => {
       cancelAnimationFrame(raf);
       observer.disconnect();
