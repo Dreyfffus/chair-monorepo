@@ -18,8 +18,6 @@ export function ActiveSessionPage({ preset, onFinish, onCancel }: ActiveSessionP
   const calledRef = useRef(false);
   const startTimeRef = useRef(Date.now());
 
-  const [complete, setComplete] = useState(false);
-  const [countdown, setCountdown] = useState(10);
   const [showPanel, setShowPanel] = useState(false);
 
   // Active settings — start from preset, may be adjusted mid-session
@@ -48,14 +46,7 @@ export function ActiveSessionPage({ preset, onFinish, onCancel }: ActiveSessionP
       }
     } catch (e) { console.error('Failed to record session:', e); }
 
-    setComplete(true);
-    setCountdown(10);
-    let remaining = 10;
-    const id = setInterval(() => {
-      remaining -= 1;
-      setCountdown(remaining);
-      if (remaining <= 0) { clearInterval(id); onFinish(); }
-    }, 1000);
+    onFinish();
   }, [preset, settings, onFinish]);
 
   useWebGLSession(canvasRef, lightColor, bgColor);
@@ -75,18 +66,6 @@ export function ActiveSessionPage({ preset, onFinish, onCancel }: ActiveSessionP
     await adjustSerial(s);
   }
 
-  if (complete) {
-    return (
-      <div className="page active-session-page">
-        <canvas ref={canvasRef} className="session-canvas" />
-        <div className="session-complete">
-          <p className="session-complete-title">Session Complete</p>
-          <p className="session-complete-sub">Returning in {countdown}s</p>
-          <button className="btn btn-ghost" onClick={onFinish}>Return</button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="page active-session-page">
