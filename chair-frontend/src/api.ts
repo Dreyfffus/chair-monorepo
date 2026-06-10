@@ -133,6 +133,8 @@ export async function updatePreset(
 }
 
 export async function loadPreset(name: string): Promise<Preset> {
+  console.log("called loadPreset");
+
   const testPreset = getTestPresets().find((p) => p.name === name);
   if (testPreset) return testPreset;
 
@@ -140,7 +142,20 @@ export async function loadPreset(name: string): Promise<Preset> {
     method: "POST",
   });
   if (!res.ok) throw new Error(`Failed to load preset: ${res.status}`);
-  return res.json();
+  const preset: Preset = await res.json();
+
+  await adjustSerial({
+    chair_angle_degrees: preset.chair_angle_degrees,
+    lumbar_heat: preset.lumbar_heat,
+    upper_back_heat: preset.upper_back_heat,
+    leg_heat: preset.leg_heat,
+    light_mode: preset.light_mode,
+    light_color: preset.light_color,
+  });
+
+  await apiFetch("/api/serial/session/start", { method: "POST" });
+
+  return preset;
 }
 
 export async function recordSession(

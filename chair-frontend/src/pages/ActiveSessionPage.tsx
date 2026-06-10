@@ -30,6 +30,8 @@ export function ActiveSessionPage({ preset, onFinish, onCancel }: ActiveSessionP
     light_color: preset.light_color,
   });
 
+
+
   const currentTheme = (document.documentElement.getAttribute('data-theme') ?? 'dark') as Theme;
   const bgColor = THEME_BG[currentTheme];
   const lightColor = settings.light_mode === 'manual' && settings.light_color

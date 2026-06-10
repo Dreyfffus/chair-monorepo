@@ -31,7 +31,7 @@ export function PresetListPage({ theme, onToggleTheme, onBack, onNew, onEdit, on
 
   const handleLoad = async (preset: Preset) => {
     try {
-      if (preset.id.startsWith('test-')) {
+      if (!preset.id.startsWith('test-')) {
         const updated = await loadPreset(preset.name);
         setPresets(prev =>
           prev.map(p => p.name === updated.name ? updated : p)

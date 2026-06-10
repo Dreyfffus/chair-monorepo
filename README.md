@@ -211,6 +211,11 @@ Responses are newline-terminated ASCII strings sent back.
 
 On boot the Arduino sends `READY` before accepting commands.
 
+>[!Note] 
+> To connect to the Arduino Nano module through the usb ttyUSB0 port for WSL2
+> `usbipd attach --wsl --busid (usbipd list | Select-String "0403:6001" | ForEach-Object { ($_.ToString().Trim() -split '\s+')[0] })`
+> For this you have to have usbipd installed. 
+
 ---
 
 ## Environment Variables
@@ -221,7 +226,7 @@ On boot the Arduino sends `READY` before accepting commands.
 | `SQLX_OFFLINE` | Yes | Set to `true` after running `cargo sqlx prepare` |
 | `RUST_LOG` | No | Log level, e.g. `chair_backend=debug` |
 | `PORT` | No | Server port, default `3001` |
-| `SERIAL_PORT` | No | e.g. `/dev/ttyACM0`. Omit to run without hardware |
+| `SERIAL_PORT` | No | e.g. `/dev/ttyUSB0`. Omit to run without hardware |
 
 ---
 

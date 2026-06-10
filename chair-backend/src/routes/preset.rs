@@ -215,17 +215,5 @@ pub async fn load_preset(
     })?
     .ok_or(StatusCode::NOT_FOUND)?;
 
-    // Send settings to Arduino then SESSION_START
-    let mut cmds = crate::serial::command::commands_for_settings(
-        preset.chair_angle_degrees,
-        preset.lumbar_heat,
-        preset.upper_back_heat,
-        preset.leg_heat,
-        &preset.light_mode,
-        preset.light_color.as_deref(),
-    );
-    cmds.push(crate::serial::Command::SessionStart);
-    state.send_commands(cmds).await;
-
     Ok(Json(preset))
 }
