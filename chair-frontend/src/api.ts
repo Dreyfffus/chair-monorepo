@@ -1,6 +1,7 @@
 import type {
   CreatePreset,
   Preset,
+  SerialStatus,
   SessionSettings,
   Stats,
   UpdatePreset,
@@ -23,12 +24,34 @@ export function isTestMachine(): boolean {
   return localStorage.getItem(IS_TEST_KEY) === "true";
 }
 
-export async function adjustSerial(settings: SessionSettings): Promise<void> {
+// Result of an adjust request. `busy` is true when the backend rejected it
+// because the servo is still moving (HTTP 409); `moving` is true when this
+// request itself started a new servo move.
+export interface AdjustResult {
+  busy: boolean;
+  moving: boolean;
+}
+
+export async function adjustSerial(
+  settings: SessionSettings,
+): Promise<AdjustResult> {
   const res = await apiFetch("/api/serial/adjust", {
     method: "POST",
     body: JSON.stringify(settings),
   });
-  if (!res.ok) console.error("Serial adjust failed:", res.status);
+  if (res.status === 409) return { busy: true, moving: false };
+  if (!res.ok) {
+    console.error("Serial adjust failed:", res.status);
+    return { busy: false, moving: false };
+  }
+  const body = await res.json().catch(() => ({ moving: false }));
+  return { busy: false, moving: Boolean(body.moving) };
+}
+
+export async function getSerialStatus(): Promise<SerialStatus> {
+  const res = await apiFetch("/api/serial/status");
+  if (!res.ok) throw new Error(`Failed to fetch serial status: ${res.status}`);
+  return res.json();
 }
 
 export async function cancelSession(): Promise<void> {

@@ -32,10 +32,19 @@ async fn main() {
         .expect("Failed to run migrations");
     tracing::info!("Migrations applied");
 
+    // Shared mirror of the chair's physical state, updated by the serial read
+    // thread and read by the HTTP handlers.
+    let chair = serial::state::new_shared();
+
     let serial = match std::env::var("SERIAL_PORT") {
-        Ok(port_name) => match serial::bridge::open(&port_name) {
+        Ok(port_name) => match serial::bridge::open(&port_name, chair.clone()) {
             Ok(handle) => {
                 tracing::info!("Serial port {port_name} ready");
+                // Sync our mirror with the hardware as soon as it is up.
+                let probe = handle.clone();
+                tokio::spawn(async move {
+                    let _ = probe.send(serial::Command::GetState).await;
+                });
                 Some(handle)
             }
             Err(e) => {
@@ -52,7 +61,31 @@ async fn main() {
         }
     };
 
-    let state = AppState { pool, serial };
+    let state = AppState {
+        pool,
+        serial,
+        chair,
+    };
+
+    // Periodically re-resolve the circadian colour and push it to the chair so
+    // the strip tracks the time of day during a session (no-op without hardware
+    // or outside a circadian session).
+    if state.serial.is_some() {
+        let bg = state.clone();
+        tokio::spawn(async move {
+            let mut ticker = tokio::time::interval(std::time::Duration::from_secs(
+                serial::circadian::CIRCADIAN_RESEND_SECS,
+            ));
+            loop {
+                ticker.tick().await;
+                bg.tick_circadian().await;
+            }
+        });
+        tracing::info!(
+            "Circadian re-send loop started ({}s interval)",
+            serial::circadian::CIRCADIAN_RESEND_SECS
+        );
+    }
 
     let cors = CorsLayer::new()
         .allow_origin(Any)

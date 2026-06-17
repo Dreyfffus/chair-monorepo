@@ -77,8 +77,10 @@ fn validate_fields(
     light_mode: &str,
     light_color: &Option<String>,
 ) -> Result<(), &'static str> {
-    if !(90..=175).contains(&chair_angle_degrees) {
-        return Err("chair_angle_degrees must be between 90 and 175");
+    if !(crate::serial::command::CHAIR_ANGLE_MIN..=crate::serial::command::CHAIR_ANGLE_MAX)
+        .contains(&chair_angle_degrees)
+    {
+        return Err("chair_angle_degrees must be between 100 and 145");
     }
     for heat in [lumbar_heat, upper_back_heat, leg_heat] {
         if !(0..=3).contains(&heat) {

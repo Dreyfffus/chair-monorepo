@@ -5,6 +5,7 @@ use tokio::runtime::Handle;
 use tokio::sync::{broadcast, mpsc};
 use tracing;
 
+use super::state::SharedChairState;
 use super::{Command, Response};
 
 const BAUD_RATE: u32 = 115_200;
@@ -39,7 +40,7 @@ impl SerialHandle {
     }
 }
 
-pub fn open(port_name: &str) -> Result<SerialHandle, serialport::Error> {
+pub fn open(port_name: &str, chair: SharedChairState) -> Result<SerialHandle, serialport::Error> {
     let port = serialport::new(port_name, BAUD_RATE)
         .timeout(Duration::from_millis(500))
         .open()?;
@@ -98,6 +99,8 @@ pub fn open(port_name: &str) -> Result<SerialHandle, serialport::Error> {
                         continue;
                     }
 
+                    apply_response_to_state(&chair, &resp);
+
                     let _ = resp_tx_read.send(resp);
                 }
                 Err(e) => {
@@ -114,4 +117,60 @@ pub fn open(port_name: &str) -> Result<SerialHandle, serialport::Error> {
 
     tracing::info!("Serial port {port_name} opened at {BAUD_RATE} baud");
     Ok(SerialHandle { cmd_tx, resp_tx })
+}
+
+/// Fold an incoming Arduino message into the shared chair state. This is the
+/// only place the *confirmed* state (and the "servo finished moving" signal)
+/// is updated from hardware.
+fn apply_response_to_state(chair: &SharedChairState, resp: &Response) {
+    let mut state = match chair.lock() {
+        Ok(g) => g,
+        Err(p) => p.into_inner(),
+    };
+
+    match resp {
+        Response::Ready => {
+            state.ready = true;
+        }
+        Response::Done { command } => {
+            // e.g. DONE:SET_ANGLE:120 — the servo has reached its target.
+            if let Some(rest) = command.strip_prefix("SET_ANGLE:") {
+                if let Ok(angle) = rest.trim().parse::<u8>() {
+                    state.angle = Some(angle);
+                }
+            } else if let Some(t) = state.target_angle {
+                state.angle = Some(t);
+            }
+            state.target_angle = None;
+            state.moving = false;
+            state.moving_since = None;
+        }
+        Response::State(report) => {
+            if let Some(v) = report.angle {
+                state.angle = Some(v);
+            }
+            if let Some(v) = report.lumbar {
+                state.lumbar_heat = Some(v);
+            }
+            if let Some(v) = report.upper_back {
+                state.upper_back_heat = Some(v);
+            }
+            if let Some(v) = report.leg {
+                state.leg_heat = Some(v);
+            }
+            if let Some(v) = report.light {
+                state.light = Some(v);
+            }
+            if let Some(moving) = report.moving {
+                state.moving = moving;
+                if !moving {
+                    state.moving_since = None;
+                    if let Some(t) = state.target_angle.take() {
+                        state.angle = Some(t);
+                    }
+                }
+            }
+        }
+        _ => {}
+    }
 }

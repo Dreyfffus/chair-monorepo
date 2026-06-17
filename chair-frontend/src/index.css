@@ -185,6 +185,14 @@ body {
   border-color: var(--accent);
   color: var(--text-primary);
 }
+.btn-ghost:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.btn-ghost:disabled:hover {
+  border-color: var(--border);
+  color: var(--text-secondary);
+}
 
 /* ── Form elements ────────────────────────────────────────────────────────  */
 .field {
@@ -736,6 +744,31 @@ body {
   gap: 16px;
   position: relative;
   z-index: 1;
+}
+
+/* ── Cooldown / movement-lock messaging ──────────────────────────────────── */
+.session-cooldown {
+  position: relative;
+  z-index: 1;
+  margin-bottom: 14px;
+  padding: 8px 16px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--accent-dim);
+  color: var(--accent);
+  font-size: 0.8125rem;
+  letter-spacing: 0.04em;
+  text-align: center;
+}
+
+.mid-session-cooldown {
+  margin: 0 0 4px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--accent-dim);
+  color: var(--accent);
+  font-size: 0.8125rem;
+  text-align: center;
 }
 
 /* ── Segment control (heating) ───────────────────────────────────────────── */

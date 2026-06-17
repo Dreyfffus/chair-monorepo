@@ -1,4 +1,10 @@
-// src/types.ts
+// src/types.ts\
+
+// Chair recline limits, in degrees. The servo's 18T pinion drives a 45T gear on
+// the backrest (2.5:1), and the firmware applies that ratio — the UI/API speak
+// in these chair degrees. Must match CHAIR_ANGLE_MIN/MAX in the Rust backend.
+export const CHAIR_ANGLE_MIN = 100;
+export const CHAIR_ANGLE_MAX = 145;
 
 export interface Preset {
   id: string;
@@ -34,6 +40,21 @@ export interface SessionSettings {
   leg_heat: number;
   light_mode: "manual" | "circadian";
   light_color: string | null;
+}
+
+// Live chair state from GET /api/serial/status. `moving` gates the UI while the
+// servo travels to a requested angle.
+export interface SerialStatus {
+  ready: boolean;
+  moving: boolean;
+  angle: number | null;
+  target_angle: number | null;
+  lumbar_heat: number | null;
+  upper_back_heat: number | null;
+  leg_heat: number | null;
+  light_color: string | null;
+  light_mode: string | null;
+  hardware_connected: boolean;
 }
 
 export interface HeatDistribution {

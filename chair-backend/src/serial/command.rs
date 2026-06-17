@@ -1,13 +1,29 @@
+use super::circadian::circadian_rgb_now;
+use super::state::ChairState;
+
+/// Chair recline limits, in degrees, exposed to the user.
+///
+/// The servo drives an 18-tooth pinion meshed with a 45-tooth gear on the
+/// backrest (a 2.5:1 reduction), so the *firmware* converts these chair
+/// degrees into servo degrees — the protocol always speaks in chair degrees.
+pub const CHAIR_ANGLE_MIN: i32 = 100;
+pub const CHAIR_ANGLE_MAX: i32 = 145;
+
 #[derive(Debug, Clone)]
 pub enum Command {
-    SetAngle(u8),      // 90–175 degrees
+    SetAngle(u8),      // 100–145 chair degrees (firmware applies the gear ratio)
     SetLumbarHeat(u8), // 0=off, 1=low, 2=med, 3=high
     SetUpperBackHeat(u8),
     SetLegHeat(u8),
-    SetLightManual { r: u8, g: u8, b: u8 },
-    SetLightCircadian,
+    SetLightManual {
+        r: u8,
+        g: u8,
+        b: u8,
+    },
     SessionStart,
     SessionEnd,
+    /// Ask the Arduino to report its current state (STATE:… line back).
+    GetState,
 }
 
 impl Command {
@@ -18,9 +34,9 @@ impl Command {
             Command::SetUpperBackHeat(v) => format!("SET_UPPER_BACK_HEAT:{v}\n"),
             Command::SetLegHeat(v) => format!("SET_LEG_HEAT:{v}\n"),
             Command::SetLightManual { r, g, b } => format!("SET_LIGHT_R:{r} G:{g} B:{b}\n"),
-            Command::SetLightCircadian => "SET_LIGHT_CIRCADIAN\n".to_string(),
             Command::SessionStart => "SESSION_START\n".to_string(),
             Command::SessionEnd => "SESSION_END\n".to_string(),
+            Command::GetState => "GET_STATE\n".to_string(),
         }
     }
 }
@@ -36,30 +52,69 @@ pub fn hex_to_rgb(hex: &str) -> (u8, u8, u8) {
     (r, g, b)
 }
 
-pub fn commands_for_settings(
-    angle: i32,
-    lumbar: i32,
-    upper_back: i32,
-    legs: i32,
-    light_mode: &str,
-    light_color: Option<&str>,
-) -> Vec<Command> {
-    let light_cmd = if light_mode == "manual" {
-        if let Some(hex) = light_color {
-            let (r, g, b) = hex_to_rgb(hex);
-            Command::SetLightManual { r, g, b }
-        } else {
-            Command::SetLightCircadian
-        }
-    } else {
-        Command::SetLightCircadian
-    };
+/// A fully-resolved target state, with all values clamped to valid ranges and
+/// the light already reduced to a concrete RGB (circadian resolved here).
+#[derive(Debug, Clone)]
+pub struct Desired {
+    pub angle: u8,
+    pub lumbar: u8,
+    pub upper_back: u8,
+    pub leg: u8,
+    pub light: (u8, u8, u8),
+    pub light_mode: String,
+}
 
-    vec![
-        Command::SetAngle(angle.clamp(90, 175) as u8),
-        Command::SetLumbarHeat(lumbar.clamp(0, 3) as u8),
-        Command::SetUpperBackHeat(upper_back.clamp(0, 3) as u8),
-        Command::SetLegHeat(legs.clamp(0, 3) as u8),
-        light_cmd,
-    ]
+impl Desired {
+    /// Build a `Desired` from raw request fields, clamping everything and
+    /// resolving circadian mode to the current concrete colour.
+    pub fn from_request(
+        angle: i32,
+        lumbar: i32,
+        upper_back: i32,
+        legs: i32,
+        light_mode: &str,
+        light_color: Option<&str>,
+    ) -> Self {
+        let light = if light_mode == "manual" {
+            light_color.map(hex_to_rgb).unwrap_or((255, 255, 255))
+        } else {
+            circadian_rgb_now()
+        };
+        Desired {
+            angle: angle.clamp(CHAIR_ANGLE_MIN, CHAIR_ANGLE_MAX) as u8,
+            lumbar: lumbar.clamp(0, 3) as u8,
+            upper_back: upper_back.clamp(0, 3) as u8,
+            leg: legs.clamp(0, 3) as u8,
+            light,
+            light_mode: light_mode.to_string(),
+        }
+    }
+}
+
+/// Commands needed to reach `desired` from the chair's current `state`,
+/// omitting anything already satisfied. An angle command is suppressed both
+/// when the chair is already there and when it is already on its way there.
+pub fn diff_commands(state: &ChairState, desired: &Desired) -> Vec<Command> {
+    let mut cmds = Vec::new();
+
+    let angle_satisfied =
+        state.angle == Some(desired.angle) || state.target_angle == Some(desired.angle);
+    if !angle_satisfied {
+        cmds.push(Command::SetAngle(desired.angle));
+    }
+    if state.lumbar_heat != Some(desired.lumbar) {
+        cmds.push(Command::SetLumbarHeat(desired.lumbar));
+    }
+    if state.upper_back_heat != Some(desired.upper_back) {
+        cmds.push(Command::SetUpperBackHeat(desired.upper_back));
+    }
+    if state.leg_heat != Some(desired.leg) {
+        cmds.push(Command::SetLegHeat(desired.leg));
+    }
+    if state.light != Some(desired.light) {
+        let (r, g, b) = desired.light;
+        cmds.push(Command::SetLightManual { r, g, b });
+    }
+
+    cmds
 }

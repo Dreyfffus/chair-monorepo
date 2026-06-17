@@ -4,7 +4,10 @@ import { FormField } from '../components/FormField';
 import { ThemeToggle } from '../components/ThemeToggle';
 import type { FieldConfig, FieldValue } from '../components/FormField';
 import type { Preset } from '../types';
+import { CHAIR_ANGLE_MIN, CHAIR_ANGLE_MAX } from '../types';
 import type { Theme } from '../hooks/useTheme';
+
+const clampAngle = (a: number) => Math.min(CHAIR_ANGLE_MAX, Math.max(CHAIR_ANGLE_MIN, a));
 
 const HEAT_OPTIONS = [
   { value: 0, label: 'Off' },
@@ -35,7 +38,7 @@ export function PresetFormPage({ theme, onToggleTheme, editing, onBack, onSaved 
 
   // Evaluated each render so isTestMachine() is always fresh
   const formFields: FieldConfig[] = [
-    { key: 'chair_angle_degrees', label: 'Chair Angle', type: 'slider', min: 90, max: 175, unit: '°' },
+    { key: 'chair_angle_degrees', label: 'Chair Angle', type: 'slider', min: CHAIR_ANGLE_MIN, max: CHAIR_ANGLE_MAX, unit: '°' },
     { key: 'lumbar_heat', label: 'Lumbar Heat', type: 'segment', options: HEAT_OPTIONS },
     { key: 'upper_back_heat', label: 'Upper Back Heat', type: 'segment', options: HEAT_OPTIONS },
     { key: 'leg_heat', label: 'Leg Heat', type: 'segment', options: HEAT_OPTIONS },
@@ -52,7 +55,7 @@ export function PresetFormPage({ theme, onToggleTheme, editing, onBack, onSaved 
   const [name, setName] = useState(editing?.name ?? '');
   const [values, setValues] = useState<Record<string, FieldValue>>(() =>
     editing ? {
-      chair_angle_degrees: editing.chair_angle_degrees,
+      chair_angle_degrees: clampAngle(editing.chair_angle_degrees),
       lumbar_heat: editing.lumbar_heat,
       upper_back_heat: editing.upper_back_heat,
       leg_heat: editing.leg_heat,
@@ -131,3 +134,4 @@ export function PresetFormPage({ theme, onToggleTheme, editing, onBack, onSaved 
     </div>
   );
 }
+

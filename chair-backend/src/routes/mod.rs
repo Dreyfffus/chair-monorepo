@@ -18,6 +18,7 @@ pub fn api_router() -> Router<AppState> {
         .route("/presets/:name/load", post(preset::load_preset))
         .route("/sessions", post(session::record_session))
         .route("/stats", get(stats::get_stats))
+        .route("/serial/status", get(serial::status))
         .route("/serial/adjust", post(serial::adjust))
         .route("/serial/session/start", post(serial::session_start))
         .route("/serial/session/end", post(serial::session_end))
