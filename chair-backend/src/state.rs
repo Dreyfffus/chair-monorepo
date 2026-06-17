@@ -126,8 +126,13 @@ impl AppState {
     }
 
     /// Clear any in-flight move bookkeeping — used when a session ends/cancels.
-    pub fn reset_motion(&self) {
+    pub fn reset_to_neutral(&self) {
         let mut chair = self.chair.lock().unwrap_or_else(|p| p.into_inner());
+        chair.light = Some((0, 0, 0));
+        chair.light_mode = None;
+        chair.lumbar_heat = Some(0);
+        chair.upper_back_heat = Some(0);
+        chair.leg_heat = Some(0);
         chair.moving = false;
         chair.moving_since = None;
         chair.target_angle = None;

@@ -83,6 +83,6 @@ pub async fn session_start(_machine: Machine, State(state): State<AppState>) -> 
 pub async fn session_end(_machine: Machine, State(state): State<AppState>) -> impl IntoResponse {
     state.set_session_active(false);
     state.send_commands(vec![Command::SessionEnd]).await;
-    state.reset_motion();
+    state.reset_to_neutral();
     StatusCode::NO_CONTENT
 }

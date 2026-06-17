@@ -34,15 +34,17 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 #include <Servo.h>
+#include <Adafruit_NeoPixel.h>
 
 // ── Pin definitions ───────────────────────────────────────────────────────────
-const int SERVO_PIN           = 9;
-const int LUMBAR_HEAT_PIN     = 3;   // PWM → MOSFET gate → heating element
-const int UPPER_BACK_HEAT_PIN = 5;   // PWM
-const int LEG_HEAT_PIN        = 6;   // PWM
-const int LIGHT_R_PIN         = 10;  // PWM → MOSFET → LED strip
-const int LIGHT_G_PIN         = 11;  // PWM
-const int LIGHT_B_PIN         = 12;  // (see PWM note above)
+const int SEAT_SERVO_PIN      = 10;
+const int BACKREST_SERVO_PIN  = 9;
+const uint16_t LED_COUNT      = 21;
+const int LIGHT_DATA_PIN      = 6;
+
+const int LUMBAR_HEAT_PIN = 3;
+const int UPPER_BACK_HEAT_PIN = 5;
+const int LEG_HEAT_PIN = 12;
 
 // ── Gear / angle configuration ─────────────────────────────────────────────────
 const float GEAR_RATIO          = 2.5;   // 45T backrest gear / 18T servo pinion
@@ -56,13 +58,14 @@ const int HEAT_PWM[4] = { 0, 64, 128, 220 };
 
 // ── RGB strip wiring ─────────────────────────────────────────────────────────────
 // Common-anode strips sink current, so the PWM duty is inverted.
-const bool LIGHT_COMMON_ANODE = true;
 
 // ── Movement timing ───────────────────────────────────────────────────────────
 const unsigned long STEP_INTERVAL_MS = 15;  // one chair-degree per step
 
 // ── State ───────────────────────────────────────────────────────────────────────
 Servo backrestServo;
+Servo seatServo;
+Adafruit_NeoPixel strip(LED_COUNT, LIGHT_DATA_PIN, NEO_RGB + NEO_KHZ800);
 
 int  currentChairAngle = CHAIR_ANGLE_MIN;  // last reached chair angle
 int  targetChairAngle  = CHAIR_ANGLE_MIN;
@@ -81,12 +84,11 @@ int chairToServo(int chairAngle) {
 }
 
 void applyLight() {
-  int r = LIGHT_COMMON_ANODE ? 255 - lightR : lightR;
-  int g = LIGHT_COMMON_ANODE ? 255 - lightG : lightG;
-  int b = LIGHT_COMMON_ANODE ? 255 - lightB : lightB;
-  analogWrite(LIGHT_R_PIN, r);
-  analogWrite(LIGHT_G_PIN, g);
-  analogWrite(LIGHT_B_PIN, b);
+  uint32_t color = strip.Color(lightG, lightR, lightB);
+  for (int i = 0; i < LED_COUNT; i++) {
+    strip.setPixelColor(i, color);
+  }
+  strip.show();
 }
 
 void applyHeat() {
@@ -110,15 +112,15 @@ void sendState() {
 void setup() {
   Serial.begin(115200);
 
-  pinMode(LUMBAR_HEAT_PIN, OUTPUT);
-  pinMode(UPPER_BACK_HEAT_PIN, OUTPUT);
-  pinMode(LEG_HEAT_PIN, OUTPUT);
-  pinMode(LIGHT_R_PIN, OUTPUT);
-  pinMode(LIGHT_G_PIN, OUTPUT);
-  pinMode(LIGHT_B_PIN, OUTPUT);
+  //pinMode(LUMBAR_HEAT_PIN, OUTPUT);
+  //pinMode(UPPER_BACK_HEAT_PIN, OUTPUT);
+  //pinMode(LEG_HEAT_PIN, OUTPUT);
+  strip.begin();
 
-  backrestServo.attach(SERVO_PIN);
-  backrestServo.write(chairToServo(currentChairAngle));
+  backrestServo.attach(BACKREST_SERVO_PIN);
+  seatServo.attach(SEAT_SERVO_PIN);
+  backrestServo.write(chairToServo(currentChairAngle));  
+  seatServo.write(chairToServo(currentChairAngle));
   applyHeat();
   applyLight();
 
@@ -150,6 +152,7 @@ void serviceMovement() {
   else if (currentChairAngle > targetChairAngle) currentChairAngle--;
 
   backrestServo.write(chairToServo(currentChairAngle));
+  seatServo.write(chairToServo(currentChairAngle));
 
   if (currentChairAngle == targetChairAngle) {
     moving = false;
@@ -184,7 +187,7 @@ void parseCommand(String cmd) {
     int level = cmd.substring(16).toInt();
     if (level < 0 || level > 3) { Serial.println("ERR:SET_LUMBAR_HEAT:INVALID"); return; }
     heatLumbar = level;
-    applyHeat();
+    //applyHeat();
     Serial.println("ACK:SET_LUMBAR_HEAT:" + String(level));
     return;
   }
@@ -194,7 +197,7 @@ void parseCommand(String cmd) {
     int level = cmd.substring(20).toInt();
     if (level < 0 || level > 3) { Serial.println("ERR:SET_UPPER_BACK_HEAT:INVALID"); return; }
     heatUpper = level;
-    applyHeat();
+    //applyHeat();
     Serial.println("ACK:SET_UPPER_BACK_HEAT:" + String(level));
     return;
   }
@@ -204,7 +207,7 @@ void parseCommand(String cmd) {
     int level = cmd.substring(13).toInt();
     if (level < 0 || level > 3) { Serial.println("ERR:SET_LEG_HEAT:INVALID"); return; }
     heatLeg = level;
-    applyHeat();
+    //applyHeat();
     Serial.println("ACK:SET_LEG_HEAT:" + String(level));
     return;
   }
@@ -235,8 +238,8 @@ void parseCommand(String cmd) {
   if (cmd == "SESSION_END") {
     sessionActive = false;
     heatLumbar = heatUpper = heatLeg = 0;
-    applyHeat();
-    lightR = lightG = lightB = 255;
+    //applyHeat();
+    lightR = lightG = lightB = 0;
     applyLight();
     targetChairAngle = CHAIR_ANGLE_MIN;
     moving = (currentChairAngle != targetChairAngle);
